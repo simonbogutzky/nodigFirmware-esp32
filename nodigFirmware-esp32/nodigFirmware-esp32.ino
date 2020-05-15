@@ -13,12 +13,12 @@
 
 const char* wiFiSsid = "";
 const char* wiFiPassword = "";
-const char* hostIp = "";
+const char* host = "";
 const int hostPort = 80;
 const int ledPin = 5;
 const int soilMoistureSensorDataPin = 35;
 const int soilMoistureSensorPowerPin = 25;
-const int waitTime = 60000;
+const int waitTime = 3600000;
 const int sensorId = 1;
 
 void setup() 
@@ -33,11 +33,11 @@ void setup()
 
 void loop() 
 {
+  delay(waitTime);
   int soilMoisture = readSoilMoisture();
   Serial.print("Soil Moisture = ");
   Serial.println(soilMoisture);
   sendSoilMoisture(soilMoisture);
-  delay(waitTime);
 }
 
 void connectToWiFi()
@@ -59,16 +59,16 @@ void connectToWiFi()
 }
 
 void sendSoilMoisture(int soilMoisture) {
-  Serial.println("Connecting to IP: " + String(hostIp));
+  Serial.println("Connecting to: " + String(host));
   WiFiClient client;
-  if (!client.connect(hostIp, hostPort))
+  if (!client.connect(host, hostPort))
   {
     Serial.println("Connection failed");
     return;
   }
   Serial.println("Connected");
   client.println("POST /api/details.json HTTP/1.1");
-  client.print("Host: "); client.println(hostIp);
+  client.print("Host: "); client.println(host);
   client.println("Content-Type: application/json");
   String jsonString = (String)"{\"soil_moisture\":" + soilMoisture + ",\"sensor_id\":" + sensorId + "}";
   int contentLength = jsonString.length();
