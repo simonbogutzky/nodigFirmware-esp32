@@ -6,20 +6,25 @@
   The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
   THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
   
-  v1.0.0
+  v1.1.0
 */
 
 #include <WiFi.h>
+#include <DHT.h>
 
 const char* wiFiSsid = "";
 const char* wiFiPassword = "";
 const char* host = "";
+const int dhtType = DHT22;
 const int hostPort = 80;
 const int ledPin = 5;
 const int soilMoistureSensorDataPin = 35;
 const int soilMoistureSensorPowerPin = 25;
+const int dhtDataPin = 33;
 const int waitTime = 3600000;
 const int sensorId = 1;
+
+DHT dht(dhtDataPin, dhtType);
 
 void setup() 
 {
@@ -28,16 +33,33 @@ void setup()
   digitalWrite(ledPin, LOW);
   pinMode(ledPin, OUTPUT);
   digitalWrite(soilMoistureSensorPowerPin, LOW);
+  dht.begin();
   connectToWiFi();
 }
 
 void loop() 
 {
   delay(waitTime);
+  
   int soilMoisture = readSoilMoisture();
   Serial.print("Soil Moisture = ");
   Serial.println(soilMoisture);
-  sendSoilMoisture(soilMoisture);
+
+  float humidity = dht.readHumidity();
+  float temperature = dht.readTemperature();
+   
+  if (isnan(humidity) || isnan(temperature)) {
+    Serial.println("Error while reading DHT");
+    return;
+  }
+
+  Serial.print("Humidity = ");
+  Serial.println(humidity);
+  Serial.print("Temperature = ");
+  Serial.println(temperature);
+
+  float dataArray[] = {soilMoisture, humidity, temperature};
+  sendData(dataArray);
 }
 
 void connectToWiFi()
@@ -58,7 +80,7 @@ void connectToWiFi()
   Serial.println(WiFi.localIP());
 }
 
-void sendSoilMoisture(int soilMoisture) {
+void sendData(float dataArray[]) {
   Serial.println("Connecting to: " + String(host));
   WiFiClient client;
   if (!client.connect(host, hostPort))
@@ -70,10 +92,11 @@ void sendSoilMoisture(int soilMoisture) {
   client.println("POST /api/details.json HTTP/1.1");
   client.print("Host: "); client.println(host);
   client.println("Content-Type: application/json");
-  String jsonString = (String)"{\"soil_moisture\":" + soilMoisture + ",\"sensor_id\":" + sensorId + "}";
+  String jsonString = (String)"{\"soil_moisture\":" + (int)dataArray[0] + ",\"humidity\":" + dataArray[1] + ",\"temperature\":" + dataArray[2] + ",\"sensor_id\":" + sensorId + "}";
   int contentLength = jsonString.length();
   client.print("Content-Length:"); client.println(contentLength);
   client.println();
+  Serial.println(jsonString);
   client.println(jsonString);
   
   unsigned long timeout = millis();
