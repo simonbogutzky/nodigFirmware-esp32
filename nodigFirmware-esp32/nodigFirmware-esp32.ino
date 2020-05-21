@@ -6,7 +6,7 @@
   The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
   THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
   
-  v1.1.0
+  v1.2.0
 */
 
 #include <WiFi.h>
@@ -18,17 +18,21 @@ const int ledPin = 5;
 const int soilMoistureSensorDataPin = 35;
 const int soilMoistureSensorPowerPin = 25;
 const int dhtDataPin = 33;
+const int dhtPowerPin = 26;
 
 DHT dht(dhtDataPin, dhtType);
 
 void setup() 
 {
   Serial.begin(9600);
-  pinMode(soilMoistureSensorPowerPin, OUTPUT);
-  digitalWrite(ledPin, LOW);
-  pinMode(ledPin, OUTPUT);
-  digitalWrite(soilMoistureSensorPowerPin, LOW);
   dht.begin();
+  pinMode(soilMoistureSensorPowerPin, OUTPUT);
+  pinMode(dhtPowerPin, OUTPUT);
+  pinMode(ledPin, OUTPUT);
+  
+  digitalWrite(soilMoistureSensorPowerPin, LOW);
+  digitalWrite(dhtPowerPin, LOW);
+  digitalWrite(ledPin, LOW);
   connectToWiFi();
 }
 
@@ -40,8 +44,11 @@ void loop()
   Serial.print("Soil Moisture = ");
   Serial.println(soilMoisture);
 
+  digitalWrite(dhtPowerPin, HIGH);
+  delay(1000);
   float humidity = dht.readHumidity();
   float temperature = dht.readTemperature();
+  digitalWrite(dhtPowerPin, LOW);
    
   if (isnan(humidity) || isnan(temperature)) {
     Serial.println("Error while reading DHT");
