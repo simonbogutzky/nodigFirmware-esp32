@@ -11,18 +11,13 @@
 
 #include <WiFi.h>
 #include <DHT.h>
+#include "Config.h"
 
-const char* wiFiSsid = "";
-const char* wiFiPassword = "";
-const char* host = "";
 const int dhtType = DHT22;
-const int hostPort = 80;
 const int ledPin = 5;
 const int soilMoistureSensorDataPin = 35;
 const int soilMoistureSensorPowerPin = 25;
 const int dhtDataPin = 33;
-const int waitTime = 3600000;
-const int sensorId = 1;
 
 DHT dht(dhtDataPin, dhtType);
 
