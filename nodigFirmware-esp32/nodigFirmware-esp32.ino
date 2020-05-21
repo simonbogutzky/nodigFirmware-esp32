@@ -6,7 +6,7 @@
   The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
   THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
   
-  v1.2.0
+  v1.3.0
 */
 
 #include <WiFi.h>
@@ -30,25 +30,18 @@ void setup()
   pinMode(dhtPowerPin, OUTPUT);
   pinMode(ledPin, OUTPUT);
   
-  digitalWrite(soilMoistureSensorPowerPin, LOW);
-  digitalWrite(dhtPowerPin, LOW);
-  digitalWrite(ledPin, LOW);
+  digitalWrite(soilMoistureSensorPowerPin, HIGH);
+  digitalWrite(dhtPowerPin, HIGH);
+  digitalWrite(ledPin, HIGH);
   connectToWiFi();
-}
 
-void loop() 
-{
-  delay(waitTime);
-  
   int soilMoisture = readSoilMoisture();
   Serial.print("Soil Moisture = ");
   Serial.println(soilMoisture);
 
-  digitalWrite(dhtPowerPin, HIGH);
   delay(1000);
   float humidity = dht.readHumidity();
   float temperature = dht.readTemperature();
-  digitalWrite(dhtPowerPin, LOW);
    
   if (isnan(humidity) || isnan(temperature)) {
     Serial.println("Error while reading DHT");
@@ -62,6 +55,14 @@ void loop()
 
   float dataArray[] = {soilMoisture, humidity, temperature};
   sendData(dataArray);
+
+  esp_sleep_enable_timer_wakeup(sleepTimeInMicroSeconds);
+  esp_deep_sleep_start();
+}
+
+void loop() 
+{
+
 }
 
 void connectToWiFi()
@@ -125,11 +126,7 @@ void sendData(float dataArray[]) {
 
 int readSoilMoisture()
 {
-  digitalWrite(ledPin, HIGH);
-  digitalWrite(soilMoistureSensorPowerPin, HIGH);
   delay(10);
   int soilMoisture = analogRead(soilMoistureSensorDataPin);
-  digitalWrite(soilMoistureSensorPowerPin, LOW);
-  digitalWrite(ledPin, LOW);
   return soilMoisture;
 }
