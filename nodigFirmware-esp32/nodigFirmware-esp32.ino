@@ -6,7 +6,7 @@
   The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
   THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
   
-  v1.3.0
+  v1.3.1
 */
 
 #include <WiFi.h>
@@ -25,6 +25,7 @@ DHT dht(dhtDataPin, dhtType);
 void setup() 
 {
   Serial.begin(9600);
+  Serial.println();
   dht.begin();
   pinMode(soilMoistureSensorPowerPin, OUTPUT);
   pinMode(dhtPowerPin, OUTPUT);
@@ -33,28 +34,31 @@ void setup()
   digitalWrite(soilMoistureSensorPowerPin, HIGH);
   digitalWrite(dhtPowerPin, HIGH);
   digitalWrite(ledPin, HIGH);
-  connectToWiFi();
+  bool connected = connectToWiFi();
 
-  int soilMoisture = readSoilMoisture();
-  Serial.print("Soil Moisture = ");
-  Serial.println(soilMoisture);
-
-  delay(1000);
-  float humidity = dht.readHumidity();
-  float temperature = dht.readTemperature();
-   
-  if (isnan(humidity) || isnan(temperature)) {
-    Serial.println("Error while reading DHT");
-    return;
+  if (connected) {
+    int soilMoisture = readSoilMoisture();
+    Serial.print("Soil Moisture = ");
+    Serial.println(soilMoisture);
+  
+    delay(1000);
+    float humidity = dht.readHumidity();
+    float temperature = dht.readTemperature();
+     
+    if (isnan(humidity) || isnan(temperature)) {
+      Serial.println("Error while reading DHT");
+      humidity = -1;
+      temperature = -1;
+    }
+  
+    Serial.print("Humidity = ");
+    Serial.println(humidity);
+    Serial.print("Temperature = ");
+    Serial.println(temperature);
+  
+    float dataArray[] = {soilMoisture, humidity, temperature};
+    sendData(dataArray);
   }
-
-  Serial.print("Humidity = ");
-  Serial.println(humidity);
-  Serial.print("Temperature = ");
-  Serial.println(temperature);
-
-  float dataArray[] = {soilMoisture, humidity, temperature};
-  sendData(dataArray);
 
   esp_sleep_enable_timer_wakeup(sleepTimeInMicroSeconds);
   esp_deep_sleep_start();
@@ -65,22 +69,33 @@ void loop()
 
 }
 
-void connectToWiFi()
+bool connectToWiFi()
 {
   int ledState = 0;
   Serial.println("Connecting to WiFi network: " + String(wiFiSsid));
   WiFi.begin(wiFiSsid, wiFiPassword);
+  
+  unsigned long timeout = millis();
   while (WiFi.status() != WL_CONNECTED) 
   {
+    if (millis() - timeout > 10000) 
+    {
+      Serial.println();
+      Serial.println("WiFi connection timeout");
+      return false;
+    }
+    
     digitalWrite(ledPin, ledState);
     ledState = (ledState + 1) % 2;
     delay(500);
     Serial.print(".");
   }
+  
   Serial.println();
   Serial.println("WiFi connected");
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
+  return true;
 }
 
 void sendData(float dataArray[]) {
@@ -88,14 +103,19 @@ void sendData(float dataArray[]) {
   WiFiClient client;
   if (!client.connect(host, hostPort))
   {
-    Serial.println("Connection failed");
+    Serial.println("Host connection failed");
     return;
   }
   Serial.println("Connected");
   client.println("POST /api/details.json HTTP/1.1");
   client.print("Host: "); client.println(host);
   client.println("Content-Type: application/json");
-  String jsonString = (String)"{\"soil_moisture\":" + (int)dataArray[0] + ",\"humidity\":" + dataArray[1] + ",\"temperature\":" + dataArray[2] + ",\"sensor_id\":" + sensorId + "}";
+  String jsonString = "";
+  if(dataArray[1] == -1 && dataArray[2] == -1) {
+    jsonString = (String)"{\"soil_moisture\":" + (int)dataArray[0] + ",\"sensor_id\":" + sensorId + "}";
+  } else {
+    jsonString = (String)"{\"soil_moisture\":" + (int)dataArray[0] + ",\"humidity\":" + dataArray[1] + ",\"temperature\":" + dataArray[2] + ",\"sensor_id\":" + sensorId + "}";
+  }
   int contentLength = jsonString.length();
   client.print("Content-Length:"); client.println(contentLength);
   client.println();
@@ -107,7 +127,7 @@ void sendData(float dataArray[]) {
   {
     if (millis() - timeout > 5000) 
     {
-      Serial.println("Client timeout");
+      Serial.println("Host connection timeout");
       client.stop();
       return;
     }
@@ -120,7 +140,7 @@ void sendData(float dataArray[]) {
   }
 
   Serial.println();
-  Serial.println("Closing connection");
+  Serial.println("Host connection closed");
   client.stop();
 }
 
