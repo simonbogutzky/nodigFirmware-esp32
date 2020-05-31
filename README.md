@@ -6,7 +6,7 @@ License: [MIT](https://opensource.org/licenses/MIT)
 
 Version: 1.3.1
 
-Document version: 1.0.1 
+Document version: 1.0.2 
 
 Date: 31/05/2020 
 
@@ -17,7 +17,7 @@ The nodig firmware is developed for a ESP32 microcontroller e.g. [SparkFun ESP32
 
 *Vegetable Beds*
 
-![Test Plant](images/test-plant.jpg)
+![Test Plant](images/test-plant-01.jpg)
 
 *Test Plant*
 
